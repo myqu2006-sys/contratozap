@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContratoZap — Gere e envie contratos de aluguel pelo WhatsApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#14213D;
+    --ink-soft:#3C4B6B;
+    --paper:#EEF1F5;
+    --paper-card:#FFFFFF;
+    --line:#D6DCE6;
+    --pix:#00C853;
+    --pix-dark:#009e42;
+    --gold:#C9A227;
+    --danger:#C0392B;
+    --font-display:'Fraunces', serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    font-family:var(--font-body);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+
+  /* ---------- Header ---------- */
+  header{
+    padding:22px clamp(16px,4vw,48px);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    background:var(--paper-card);
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:1.3rem;
+    letter-spacing:-0.01em;
+  }
+  .brand .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:var(--pix);
+    box-shadow:0 0 0 3px rgba(0,200,83,0.15);
+  }
+  .brand-tag{
+    font-size:0.72rem;
+    font-family:var(--font-mono);
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    display:block;
+    margin-top:2px;
+    font-weight:500;
+  }
+  .brand-block{display:flex;flex-direction:column;}
+
+  /* ---------- Layout ---------- */
+  .app{
+    display:grid;
+    grid-template-columns: minmax(320px,460px) 1fr;
+    gap:0;
+    min-height:calc(100vh - 73px);
+  }
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Wizard panel ---------- */
+  .wizard{
+    padding:clamp(20px,4vw,40px);
+    border-right:1px solid var(--line);
+  }
+  .steps-nav{
+    display:flex;
+    gap:6px;
+    margin-bottom:28px;
+  }
+  .steps-nav .seg{
+    flex:1;
+    height:4px;
+    border-radius:3px;
+    background:var(--line);
+    overflow:hidden;
+  }
+  .steps-nav .seg.done{background:var(--pix);}
+  .steps-nav .seg.current{background:var(--ink);}
+
+  .step-title{
+    font-family:var(--font-mono);
+    text-transform:uppercase;
+    font-size:.72rem;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  h2.step-h{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:1.5rem;
+    margin:0 0 22px 0;
+  }
+
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-size:.82rem;
+    font-weight:600;
+    margin-bottom:6px;
+    color:var(--ink-soft);
+  }
+  .field input, .field select, .field textarea{
+    width:100%;
+    padding:11px 13px;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    font-family:var(--font-body);
+    font-size:.95rem;
+    background:var(--paper-card);
+    color:var(--ink);
+    transition:border-color .15s ease;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:none;
+    border-color:var(--ink);
+  }
+  .field textarea{resize:vertical;min-height:70px;}
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  .nav-btns{
+    display:flex;
+    justify-content:space-between;
+    margin-top:26px;
+    gap:10px;
+  }
+  button{
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:.92rem;
+    border:none;
+    border-radius:8px;
+    padding:12px 20px;
+    cursor:pointer;
+    transition:transform .1s ease, opacity .15s ease;
+  }
+  button:active{transform:scale(0.97);}
+  .btn-primary{
+    background:var(--ink);
+    color:#fff;
+  }
+  .btn-primary:hover{opacity:.92;}
+  .btn-ghost{
+    background:transparent;
+    color:var(--ink-soft);
+    border:1.5px solid var(--line);
+  }
+  .btn-ghost:hover{border-color:var(--ink-soft);}
+  .btn-pix{
+    background:var(--pix);
+    color:#fff;
+  }
+  .btn-pix:hover{background:var(--pix-dark);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+
+  .hint{
+    font-size:.78rem;
+    color:var(--ink-soft);
+    margin-top:-8px;
+    margin-bottom:16px;
+    line-height:1.4;
+  }
+
+  /* ---------- Preview panel ---------- */
+  .preview-panel{
+    padding:clamp(20px,4vw,40px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(20,33,61,0.035), transparent 40%),
+      var(--paper);
+  }
+  .preview-toolbar{
+    width:100%;
+    max-width:640px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+  }
+  .preview-toolbar .label{
+    font-family:var(--font-mono);
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--ink-soft);
+  }
+  .status-pill{
+    font-family:var(--font-mono);
+    font-size:.7rem;
+    padding:5px 10px;
+    border-radius:20px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    font-weight:600;
+  }
+  .status-pill.locked{background:#F4E3DB;color:var(--danger);}
+  .status-pill.unlocked{background:#DFF6E8;color:var(--pix-dark);}
+
+  .sheet-wrap{
+    position:relative;
+    width:100%;
+    max-width:640px;
+  }
+  .sheet{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:3px;
+    box-shadow:0 18px 40px -18px rgba(20,33,61,0.35), 0 2px 6px rgba(20,33,61,0.08);
+    padding:44px 40px 60px 56px;
+    position:relative;
+    min-height:520px;
+    font-family:var(--font-mono);
+    font-size:.82rem;
+    line-height:1.75;
+    color:#1c2740;
+    white-space:pre-wrap;
+    overflow:hidden;
+  }
+  .sheet::before{
+    content:'';
+    position:absolute;
+    left:38px;top:0;bottom:0;
+    width:1px;
+    background:rgba(192,57,43,0.28);
+  }
+  .sheet h3{
+    font-family:var(--font-display);
+    font-size:1.15rem;
+    margin:0 0 18px 0;
+    text-align:center;
+    letter-spacing:.01em;
+  }
+  .placeholder-text{color:#9AA5BC;font-style:italic;}
+
+  .watermark-layer{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    overflow:hidden;
+  }
+  .watermark-layer span{
+    font-family:var(--font-display);
+    font-size:2.6rem;
+    font-weight:700;
+    color:rgba(192,57,43,0.13);
+    transform:rotate(-28deg);
+    white-space:nowrap;
+    letter-spacing:.05em;
+  }
+
+  /* Carimbo (stamp) — signature element */
+  .carimbo{
+    position:absolute;
+    right:26px;
+    bottom:26px;
+    width:118px;
+    height:118px;
+    opacity:0;
+    transform:scale(2.4) rotate(-18deg);
+    transition:opacity .25s ease, transform .45s cubic-bezier(.2,1.6,.4,1);
+  }
+  .carimbo.show{
+    opacity:1;
+    transform:scale(1) rotate(-11deg);
+  }
+  .carimbo svg{width:100%;height:100%;display:block;}
+
+  .preview-actions{
+    width:100%;
+    max-width:640px;
+    margin-top:18px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .preview-actions button{flex:1;min-width:160px;}
+
+  /* ---------- Paywall ---------- */
+  .pix-box{
+    border:1.5px dashed var(--pix);
+    border-radius:10px;
+    padding:18px;
+    background:#F3FCF6;
+    text-align:center;
+  }
+  .pix-box .amount{
+    font-family:var(--font-display);
+    font-size:1.8rem;
+    font-weight:700;
+    margin:6px 0;
+  }
+  .qr-fake{
+    width:132px;height:132px;
+    margin:14px auto;
+    background:
+      repeating-linear-gradient(0deg, #14213D 0 6px, transparent 6px 12px),
+      repeating-linear-gradient(90deg, #14213D 0 6px, transparent 6px 12px);
+    background-blend-mode:multiply;
+    background-color:#fff;
+    border-radius:8px;
+    border:1px solid var(--line);
+  }
+  .plan-toggle{
+    display:flex;
+    gap:8px;
+    margin:14px 0;
+  }
+  .plan-opt{
+    flex:1;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    padding:10px;
+    cursor:pointer;
+    font-size:.82rem;
+    text-align:center;
+  }
+  .plan-opt.active{
+    border-color:var(--ink);
+    background:var(--ink);
+    color:#fff;
+  }
+  .dev-note{
+    font-size:.72rem;
+    color:var(--ink-soft);
+    margin-top:12px;
+    line-height:1.5;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-block">
+    <div class="brand"><span class="dot"></span>ContratoZap</div>
+    <span class="brand-tag">Contrato pronto → Pix → WhatsApp</span>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- WIZARD -->
+  <div class="wizard">
+    <div class="steps-nav" id="stepsNav"></div>
+
+    <!-- STEP 1 -->
+    <section class="step" data-step="1">
+      <div class="step-title">Passo 1 de 5</div>
+      <h2 class="step-h">Dados do locador</h2>
+      <div class="field">
+        <label>Nome completo</label>
+        <input type="text" id="locadorNome" placeholder="Ex: José da Silva Santos">
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label>CPF ou CNPJ</label>
+          <input type="text" id="locadorDoc" placeholder="000.000.000-00">
+        </div>
+        <div class="field">
+          <label>Telefone (WhatsApp)</label>
+          <input type="text" id="locadorTel" placeholder="(11) 99999-0000">
+        </div>
+      </div>
+      <div class="field">
+        <label>Endereço completo</label>
+        <input type="text" id="locadorEndereco" placeholder="Rua, número, bairro, cidade/UF">
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="step" data-step="2" hidden>
+      <div class="step-title">Passo 2 de 5</div>
+      <h2 class="step-h">Dados do locatário</h2>
+      <div class="field">
+        <label>Nome completo</label>
+        <input type="text" id="locatarioNome" placeholder="Ex: Maria Oliveira Costa">
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label>CPF ou CNPJ</label>
+          <input type="text" id="locatarioDoc" placeholder="000.000.000-00">
+        </div>
+        <div class="field">
+          <label>Telefone (WhatsApp)</label>
+          <input type="text" id="locatarioTel" placeholder="(11) 99999-0000">
+        </div>
+      </div>
+      <div class="field">
+        <label>Endereço atual</label>
+        <input type="text" id="locatarioEndereco" placeholder="Rua, número, bairro, cidade/UF">
+      </div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="step" data-step="3" hidden>
+      <div class="step-title">Passo 3 de 5</div>
+      <h2 class="step-h">Imóvel e condições</h2>
+      <div class="field">
+        <label>Endereço do imóvel alugado</label>
+        <input type="text" id="imovelEndereco" placeholder="Rua, número, complemento, cidade/UF">
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label>Valor do aluguel (R$)</label>
+          <input type="text" id="valorAluguel" placeholder="1.500,00">
+        </div>
+        <div class="field">
+          <label>Dia de vencimento</label>
+          <input type="text" id="diaVencimento" placeholder="Ex: 05">
+        </div>
+      </div>
+      <div class="row-2">
+        <div class="field">
+          <label>Prazo do contrato</label>
+          <input type="text" id="prazoContrato" placeholder="Ex: 30 meses">
+        </div>
+        <div class="field">
+          <label>Data de início</label>
+          <input type="date" id="dataInicio">
+        </div>
+      </div>
+      <div class="field">
+        <label>Observações (opcional)</label>
+        <textarea id="observacoes" placeholder="Ex: reajuste anual pelo IGP-M, animais de estimação permitidos, etc."></textarea>
+      </div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="step" data-step="4" hidden>
+      <div class="step-title">Passo 4 de 5</div>
+      <h2 class="step-h">Revisar contrato</h2>
+      <p class="hint">Confira os dados na pré-visualização ao lado. O documento sai com marca d'água até a liberação. Você pode voltar e corrigir qualquer campo antes de prosseguir.</p>
+    </section>
+
+    <!-- STEP 5 -->
+    <section class="step" data-step="5" hidden>
+      <div class="step-title">Passo 5 de 5</div>
+      <h2 class="step-h">Liberar documento final</h2>
+      <div class="plan-toggle">
+        <div class="plan-opt active" data-plan="unico" onclick="selectPlan('unico')">Avulso<br><b>R$ 9,90</b></div>
+        <div class="plan-opt" data-plan="assinatura" onclick="selectPlan('assinatura')">Ilimitado/mês<br><b>R$ 29,90</b></div>
+      </div>
+      <div class="pix-box">
+        <div style="font-size:.8rem;color:var(--ink-soft);">Pague com Pix para liberar</div>
+        <div class="amount" id="pixAmount">R$ 9,90</div>
+
+        <div id="pixAntes">
+          <div class="field" style="text-align:left;margin-top:10px;">
+            <label>Seu e-mail (recibo do pagamento)</label>
+            <input type="email" id="pagadorEmail" placeholder="voce@email.com">
+          </div>
+          <button class="btn-pix" style="width:100%" onclick="gerarCobrancaPix()" id="btnGerarPix">Gerar Pix</button>
+        </div>
+
+        <div id="pixDepois" style="display:none;">
+          <img id="qrImg" src="" alt="QR Code Pix" style="width:180px;height:180px;margin:10px auto;display:block;border-radius:8px;border:1px solid var(--line);">
+          <div class="field" style="text-align:left;">
+            <label>Pix copia e cola</label>
+            <input type="text" id="qrCopiaCola" readonly onclick="this.select()">
+          </div>
+          <div id="pixStatusMsg" style="font-size:.82rem;color:var(--ink-soft);margin-top:6px;">Aguardando pagamento...</div>
+        </div>
+
+        <div class="dev-note" id="pixDevNote">Use suas credenciais de TESTE do Mercado Pago pra simular o pagamento sem gastar dinheiro real (o Mercado Pago tem contas de teste específicas pra isso). Quando estiver tudo certo, troque pelas credenciais de PRODUÇÃO.</div>
+      </div>
+    </section>
+
+    <div class="nav-btns">
+      <button class="btn-ghost" id="btnBack" onclick="changeStep(-1)">Voltar</button>
+      <button class="btn-primary" id="btnNext" onclick="changeStep(1)">Continuar</button>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-panel">
+    <div class="preview-toolbar">
+      <span class="label">Pré-visualização do documento</span>
+      <span class="status-pill locked" id="statusPill">Bloqueado</span>
+    </div>
+
+    <div class="sheet-wrap">
+      <div class="sheet" id="sheet">
+        <h3>CONTRATO DE LOCAÇÃO RESIDENCIAL</h3>
+        <span id="contractBody" class="placeholder-text">Preencha os dados ao lado para ver o contrato ganhar forma aqui em tempo real...</span>
+        <div class="watermark-layer" id="watermarkLayer">
+          <span>MODELO — NÃO VÁLIDO</span>
+        </div>
+        <div class="carimbo" id="carimbo">
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#00C853" stroke-width="4"/>
+            <circle cx="60" cy="60" r="42" fill="none" stroke="#00C853" stroke-width="1.5"/>
+            <text x="60" y="52" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" font-weight="600" fill="#00C853">DOCUMENTO</text>
+            <text x="60" y="66" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" font-weight="600" fill="#00C853">VALIDADO</text>
+            <text x="60" y="80" text-anchor="middle" font-family="IBM Plex Mono" font-size="7" fill="#00C853" id="carimboData">--/--/----</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-actions">
+      <button class="btn-ghost" onclick="downloadPdf()" id="btnDownload" disabled>⬇ Baixar PDF final</button>
+      <button class="btn-pix" onclick="sendWhatsapp()" id="btnWpp" disabled>Enviar pelo WhatsApp</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let currentStep = 1;
+const totalSteps = 5;
+let unlocked = false;
+let selectedPlan = 'unico';
+
+const stepsNav = document.getElementById('stepsNav');
+for(let i=1;i<=totalSteps;i++){
+  const seg = document.createElement('div');
+  seg.className = 'seg';
+  seg.id = 'seg'+i;
+  stepsNav.appendChild(seg);
+}
+
+function getData(){
+  return {
+    locadorNome: val('locadorNome'), locadorDoc: val('locadorDoc'), locadorTel: val('locadorTel'), locadorEndereco: val('locadorEndereco'),
+    locatarioNome: val('locatarioNome'), locatarioDoc: val('locatarioDoc'), locatarioTel: val('locatarioTel'), locatarioEndereco: val('locatarioEndereco'),
+    imovelEndereco: val('imovelEndereco'), valorAluguel: val('valorAluguel'), diaVencimento: val('diaVencimento'),
+    prazoContrato: val('prazoContrato'), dataInicio: val('dataInicio'), observacoes: val('observacoes')
+  };
+}
+function val(id){ return document.getElementById(id).value.trim(); }
+
+function buildContractText(d){
+  const hasCore = d.locadorNome || d.locatarioNome || d.imovelEndereco;
+  if(!hasCore) return null;
+
+  return `LOCADOR(A): ${d.locadorNome || '____________________'}, portador(a) do documento nº ${d.locadorDoc || '____________'}, residente em ${d.locadorEndereco || '____________________'}.
+
+LOCATÁRIO(A): ${d.locatarioNome || '____________________'}, portador(a) do documento nº ${d.locatarioDoc || '____________'}, residente em ${d.locatarioEndereco || '____________________'}.
+
+CLÁUSULA 1ª — DO OBJETO
+O(A) LOCADOR(A) dá em locação ao(à) LOCATÁRIO(A) o imóvel situado em ${d.imovelEndereco || '____________________'}, destinado exclusivamente para fins residenciais.
+
+CLÁUSULA 2ª — DO PRAZO
+O presente contrato vigorará pelo prazo de ${d.prazoContrato || '____________'}, com início em ${formatDate(d.dataInicio)}.
+
+CLÁUSULA 3ª — DO ALUGUEL
+O valor mensal do aluguel é de R$ ${d.valorAluguel || '____________'}, com vencimento todo dia ${d.diaVencimento || '__'} de cada mês.
+
+CLÁUSULA 4ª — DISPOSIÇÕES GERAIS
+${d.observacoes || 'Sem observações adicionais.'}
+
+E por estarem de acordo, as partes assinam o presente instrumento.
+
+_____________________________          _____________________________
+${d.locadorNome || 'Locador(a)'}                              ${d.locatarioNome || 'Locatário(a)'}`;
+}
+
+function formatDate(iso){
+  if(!iso) return '____/____/______';
+  const [y,m,day] = iso.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function renderPreview(){
+  const d = getData();
+  const text = buildContractText(d);
+  const body = document.getElementById('contractBody');
+  if(text){
+    body.textContent = text;
+    body.classList.remove('placeholder-text');
+  } else {
+    body.textContent = 'Preencha os dados ao lado para ver o contrato ganhar forma aqui em tempo real...';
+    body.classList.add('placeholder-text');
+  }
+}
+
+function changeStep(dir){
+  const next = currentStep + dir;
+  if(next < 1 || next > totalSteps) return;
+  document.querySelector(`.step[data-step="${currentStep}"]`).hidden = true;
+  currentStep = next;
+  document.querySelector(`.step[data-step="${currentStep}"]`).hidden = false;
+  updateNav();
+}
+
+function updateNav(){
+  for(let i=1;i<=totalSteps;i++){
+    const seg = document.getElementById('seg'+i);
+    seg.className = 'seg' + (i < currentStep ? ' done' : i === currentStep ? ' current' : '');
+  }
+  document.getElementById('btnBack').disabled = currentStep === 1;
+  const btnNext = document.getElementById('btnNext');
+  if(currentStep === totalSteps){
+    btnNext.style.display = 'none';
+  } else {
+    btnNext.style.display = 'inline-block';
+    btnNext.textContent = currentStep === totalSteps-1 ? 'Ir para pagamento' : 'Continuar';
+  }
+}
+
+function selectPlan(plan){
+  selectedPlan = plan;
+  document.querySelectorAll('.plan-opt').forEach(el => el.classList.toggle('active', el.dataset.plan === plan));
+  document.getElementById('pixAmount').textContent = plan === 'unico' ? 'R$ 9,90' : 'R$ 29,90/mês';
+}
+
+let pollTimer = null;
+
+async function gerarCobrancaPix(){
+  const email = document.getElementById('pagadorEmail').value.trim();
+  if(!email){ alert('Informe um e-mail antes de gerar o Pix.'); return; }
+
+  const amount = selectedPlan === 'unico' ? 9.90 : 29.90;
+  const btn = document.getElementById('btnGerarPix');
+  btn.disabled = true;
+  btn.textContent = 'Gerando...';
+
+  try {
+    const resp = await fetch('/api/criar-cobranca', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, description: 'ContratoZap - documento', email })
+    });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Erro ao gerar cobrança');
+
+    document.getElementById('qrImg').src = `data:image/jpeg;base64,${data.qrCodeBase64}`;
+    document.getElementById('qrCopiaCola').value = data.qrCode;
+    document.getElementById('pixAntes').style.display = 'none';
+    document.getElementById('pixDepois').style.display = 'block';
+
+    pollTimer = setInterval(() => verificarPagamento(data.orderId), 3000);
+  } catch (err) {
+    alert('Não foi possível gerar o Pix: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = 'Gerar Pix';
+  }
+}
+
+async function verificarPagamento(orderId){
+  try {
+    const resp = await fetch(`/api/verificar-pagamento?orderId=${orderId}`);
+    const data = await resp.json();
+    if(data.paid){
+      clearInterval(pollTimer);
+      liberarDocumento();
+    } else if(data.status === 'canceled' || data.status === 'expired'){
+      clearInterval(pollTimer);
+      document.getElementById('pixStatusMsg').textContent = 'Cobrança expirada ou cancelada. Gere um novo Pix.';
+    }
+  } catch (err) {
+    // silencioso: só tenta de novo no próximo intervalo
+  }
+}
+
+function liberarDocumento(){
+  unlocked = true;
+  document.getElementById('statusPill').textContent = 'Liberado';
+  document.getElementById('statusPill').className = 'status-pill unlocked';
+  document.getElementById('watermarkLayer').style.display = 'none';
+  document.getElementById('btnDownload').disabled = false;
+  document.getElementById('btnWpp').disabled = false;
+  document.getElementById('pixStatusMsg').textContent = 'Pagamento confirmado ✓';
+
+  const carimbo = document.getElementById('carimbo');
+  const now = new Date();
+  document.getElementById('carimboData').textContent = now.toLocaleDateString('pt-BR');
+  carimbo.classList.add('show');
+}
+
+function downloadPdf(){
+  const d = getData();
+  const text = buildContractText(d);
+  if(!text) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  doc.setFont('times','bold');
+  doc.setFontSize(15);
+  doc.text('CONTRATO DE LOCAÇÃO RESIDENCIAL', 297, 60, { align:'center' });
+  doc.setFont('times','normal');
+  doc.setFontSize(11);
+  const lines = doc.splitTextToSize(text, 470);
+  doc.text(lines, 62, 100, { lineHeightFactor:1.5 });
+  doc.save('contrato-locacao.pdf');
+}
+
+function sendWhatsapp(){
+  const d = getData();
+  const tel = (d.locatarioTel || '').replace(/\D/g,'');
+  const msg = encodeURIComponent(
+    `Olá ${d.locatarioNome || ''}! Segue o contrato de locação referente ao imóvel em ${d.imovelEndereco || ''}. Baixei o PDF por aqui — vou te enviar o arquivo em seguida. Qualquer dúvida me chama.`
+  );
+  const url = tel ? `https://wa.me/55${tel}?text=${msg}` : `https://wa.me/?text=${msg}`;
+  window.open(url, '_blank');
+}
+
+document.querySelectorAll('.wizard input, .wizard textarea').forEach(el => {
+  el.addEventListener('input', renderPreview);
+});
+
+updateNav();
+renderPreview();
+</script>
+
+</body>
+</html>
